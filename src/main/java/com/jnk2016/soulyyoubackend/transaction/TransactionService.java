@@ -134,7 +134,7 @@ public class TransactionService {
         newEntry.setAmount((double)body.get("amount"));
         newEntry.setBudget(monthlyBudgetService.getCurrentBudget(auth));
         newEntry.setType((String)body.get("type"));
-        newEntry.setTimestamp((LocalDateTime)body.get("timestamp"));
+        newEntry.setTimestamp((LocalDateTime)body.get("timestamp"));    // format "yyyy-MM-ddTHH:mm:ss"
         newEntry.setCompleted(newEntry.getType().equals("expense") || (boolean) body.get("completed"));
         transactionRepository.save(newEntry);
 

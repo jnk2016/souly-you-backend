@@ -52,6 +52,7 @@ class SavingsGoalServiceTest {
                 LocalDate.now(),
                 new ArrayList<>(),
                 new ArrayList<>(),
+                new ArrayList<>(),
                 new ArrayList<>()
         );
     }

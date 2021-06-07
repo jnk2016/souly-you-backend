@@ -1,5 +1,6 @@
 package com.jnk2016.soulyyoubackend.user;
 import com.jnk2016.soulyyoubackend.monthlybudget.MonthlyBudget;
+import com.jnk2016.soulyyoubackend.mood.Mood;
 import com.jnk2016.soulyyoubackend.savingsgoal.SavingsGoal;
 import com.jnk2016.soulyyoubackend.transaction.Transaction;
 import lombok.AllArgsConstructor;
@@ -51,6 +52,9 @@ public class ApplicationUser implements Serializable {
 
     @OneToMany(mappedBy="user", cascade=CascadeType.ALL, fetch=FetchType.LAZY)
     private List<SavingsGoal> savingsGoals;
+
+    @OneToMany(mappedBy="user", cascade=CascadeType.ALL, fetch=FetchType.LAZY)
+    private List<Mood> moods;
 
     public ApplicationUser(String username, String password, String firstname, String lastname, LocalDate dateJoined){
         this.username = username;
