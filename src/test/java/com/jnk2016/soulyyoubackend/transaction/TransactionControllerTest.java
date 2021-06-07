@@ -247,7 +247,7 @@ class TransactionControllerTest {
     @Test
     void shouldCreateNewTransaction() {
         when(transactionService.newTransaction(auth, new HashMap<>())).thenReturn(300.00);
-        assertEquals(200, transactionController.newTransaction(auth, new HashMap<>()).getStatusCodeValue());
+        assertEquals(201, transactionController.newTransaction(auth, new HashMap<>()).getStatusCodeValue());
     }
 
     @Test
@@ -266,7 +266,7 @@ class TransactionControllerTest {
     @Test
     void shouldNOTRemoveTransaction() {
         when(transactionService.removeTransaction(1L)).thenThrow(new NullPointerException("No IDs given"));
-        assertEquals(400, transactionController.removeTransaction(1L).getStatusCodeValue());
+        assertEquals(410, transactionController.removeTransaction(1L).getStatusCodeValue());
         assertEquals("No IDs given", transactionController.removeTransaction(1L).getBody());
     }
 
@@ -277,9 +277,16 @@ class TransactionControllerTest {
     }
 
     @Test
-    void shouldNOTUpdateTransaction() {
-        when(transactionService.updateTransaction(1L, new HashMap<>())).thenThrow(new NullPointerException("No IDs given"));
+    void shouldNOTUpdateTransactionWhenInvalidBody() {
+        when(transactionService.updateTransaction(1L, new HashMap<>())).thenThrow(new IllegalArgumentException("Incorrect JSON body"));
         assertEquals(400, transactionController.updateTransaction(1L, new HashMap<>()).getStatusCodeValue());
-        assertEquals("No IDs given", transactionController.updateTransaction(1L, new HashMap<>()).getBody().get("message"));
+        assertEquals("Incorrect JSON body", transactionController.updateTransaction(1L, new HashMap<>()).getBody().get("message"));
+    }
+
+    @Test
+    void shouldNOTUpdateTransactionWhenInvalidIdGiven() {
+        when(transactionService.updateTransaction(1L, new HashMap<>())).thenThrow(new NullPointerException("No ID given"));
+        assertEquals(410, transactionController.updateTransaction(1L, new HashMap<>()).getStatusCodeValue());
+        assertEquals("No ID given", transactionController.updateTransaction(1L, new HashMap<>()).getBody().get("message"));
     }
 }

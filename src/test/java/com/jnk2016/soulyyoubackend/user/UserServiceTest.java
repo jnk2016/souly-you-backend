@@ -1,6 +1,5 @@
 package com.jnk2016.soulyyoubackend.user;
 
-import org.apache.tomcat.jni.Local;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -10,10 +9,12 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import javax.persistence.Entity;
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,21 +58,22 @@ class UserServiceTest {
 
     @Test
     void shouldReturnApplicationUser() {
-        when(applicationUserRepository.findByUsername("bioround")).thenReturn(applicationUser);
+        when(applicationUserRepository.findByUsername("bioround")).thenReturn(Optional.of(applicationUser));
 
         assertEquals(applicationUser, userService.getApplicationUser(auth));
     }
 
     @Test
     void shouldNOTReturnApplicationUser() {
-        when(applicationUserRepository.findByUsername("bioround")).thenReturn(null);
+        when(applicationUserRepository.findByUsername("bioround")).thenThrow(new EntityNotFoundException("No such user exists"));
 
-        assertNull(userService.getApplicationUser(auth));
+        assertThrows(EntityNotFoundException.class,
+                ()-> userService.getApplicationUser(auth));
     }
 
     @Test
     void userShouldAlreadyExist() {
-        when(applicationUserRepository.findByUsername("bioround")).thenReturn(applicationUser);
+        when(applicationUserRepository.findByUsername("bioround")).thenReturn(Optional.of(applicationUser));
 
         assertFalse(userService.newUser(body));
     }
@@ -79,28 +81,29 @@ class UserServiceTest {
     @Test
     void shouldMakeNewUser() {
         body.put("username", "bioround2");
-        when(applicationUserRepository.findByUsername("bioround")).thenReturn(applicationUser);
+        when(applicationUserRepository.findByUsername("bioround")).thenReturn(Optional.of(applicationUser));
 
         assertTrue(userService.newUser(body));
     }
 
     @Test
     void shouldGetDateJoined() {
-        when(applicationUserRepository.findByUsername("bioround")).thenReturn(applicationUser);
+        when(applicationUserRepository.findByUsername("bioround")).thenReturn(Optional.of(applicationUser));
 
         assertEquals(LocalDate.now(), userService.getDateJoined(auth));
     }
 
     @Test
     void shouldNOTGetDateJoined() {
-        when(applicationUserRepository.findByUsername("bioround")).thenReturn(null);
+        when(applicationUserRepository.findByUsername("bioround")).thenThrow(new EntityNotFoundException("No such user found"));
 
-        assertNull(userService.getDateJoined(auth));
+        assertThrows(EntityNotFoundException.class,
+                ()-> userService.getDateJoined(auth));
     }
 
     @Test
     void shouldConvertToJsonBody() {
-        List<String> filters = Stream.of("password", "dateJoined", "budgets", "transactions")
+        List<String> filters = Stream.of("password", "dateJoined", "budgets", "transactions", "savingsGoals")
                 .collect(Collectors.toList());
 
         HashMap<String, Object> actual = userService.toJsonBody(ApplicationUser.class, applicationUser, filters);
@@ -108,7 +111,7 @@ class UserServiceTest {
         actual.remove("password"); actual.remove("dateJoined"); actual.remove("budgets"); actual.remove("transactions");
 
         HashMap<String, Object> expected = new HashMap<>();
-        expected.put("userId", 1L); expected.put("username", "bioround"); expected.put("firstname", "Nikhil"); expected.put("lastname", "Suri");
+        expected.put("user_id", 1L); expected.put("username", "bioround"); expected.put("firstname", "Nikhil"); expected.put("lastname", "Suri");
 
         assertEquals(actual, expected);
     }

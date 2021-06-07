@@ -31,11 +31,10 @@ public class SavingsGoalService {
     public List<HashMap<String, Object>> getAllUserSavingsGoals(Authentication auth) {
         List<HashMap<String,Object>> response = new ArrayList<>();
 
-        ApplicationUser user = userService.getApplicationUser(auth);    // throws NullPointerException
-        if(user == null) { throw new NullPointerException("No such user found"); }
+        ApplicationUser user = userService.getApplicationUser(auth);    // throws EntityNotFoundException
 
-        List<SavingsGoal> savingsGoals = savingsGoalRepository.findByUser(user);    // throws NullPointerException
-        if(savingsGoals == null || savingsGoals.size() == 0) { throw new NullPointerException("No savings goals yet"); }
+        List<SavingsGoal> savingsGoals = savingsGoalRepository.findByUser(user);
+        if(savingsGoals == null || savingsGoals.size() == 0) { return new ArrayList<>(); }
 
         for(SavingsGoal savingsGoal : savingsGoals) {
             response.add(toJsonBody(savingsGoal));
@@ -45,18 +44,18 @@ public class SavingsGoalService {
 
     @SneakyThrows(NullPointerException.class)
     public SavingsGoal findSavingsGoalById(long id) {
-        return savingsGoalRepository.findById(id).orElseThrow(()-> new NullPointerException("Savings Goal not found"));
+        return savingsGoalRepository.findById(id).orElseThrow(()-> new NullPointerException("Savings Goal " + id +" not found"));
     }
 
-    public HashMap<String, Object> createNewSavingsGoal(Authentication auth, HashMap<String, Object> body) {
+    public SavingsGoal createNewSavingsGoal(Authentication auth, HashMap<String, Object> body) {
         ApplicationUser user = userService.getApplicationUser(auth);
         SavingsGoal newEntry = new SavingsGoal();
 
-        if(!(body.containsKey("name") && body.containsKey("goal_amount") && body.containsKey("saved_amount"))) {
-            throw new NullPointerException("Incorrect formatting of request body");
+        if(!(body.containsKey("name") && body.containsKey("goal_amount") && body.containsKey("saved_amount") && body.size() == 3)) {
+            throw new IllegalArgumentException("Incorrect formatting of request body");
         }
-        else if((double)body.get("goal_amount") > 0.00 && (double)body.get("saved_amount") >= 0.00) {
-            throw new NullPointerException("Invalid value for saved and/or goal amount");
+        else if(!((double)body.get("goal_amount") > 0.00 && (double)body.get("saved_amount") >= 0.00)) {
+            throw new IllegalArgumentException("Invalid value for saved and/or goal amount");
         }
 
         newEntry.setUser(user);
@@ -66,34 +65,41 @@ public class SavingsGoalService {
         newEntry.setComplete(newEntry.getSavedAmount() >= newEntry.getGoalAmount());
         savingsGoalRepository.save(newEntry);
 
-        return toJsonBody(newEntry);
+        return newEntry;
     }
 
-    public HashMap<String, Object> updateSavingsGoal(long id, HashMap<String, Object> body) {
+    public SavingsGoal updateSavingsGoal(long id, HashMap<String, Object> body) {
         SavingsGoal savingsGoal = findSavingsGoalById(id);
 
         if(!(body.containsKey("name") || body.containsKey("goal_amount") || body.containsKey("saved_amount"))) {
-            throw new NullPointerException("Please provide a property to update");
+            throw new IllegalArgumentException("Please provide at least one attribute to update");
         }
 
         if(body.containsKey("name")){
             savingsGoal.setName((String) body.get("name"));
         }
         if(body.containsKey("goal_amount")){
+            if((double) body.get("goal_amount") <= 0.00) {
+                throw new IllegalArgumentException("Invalid value for saved and/or goal amount");
+            }
             savingsGoal.setGoalAmount((double) body.get("goal_amount"));
         }
         if(body.containsKey("saved_amount")){
+            if((double) body.get("saved_amount") < 0.00) {
+                throw new IllegalArgumentException("Invalid value for saved and/or goal amount");
+            }
             savingsGoal.setSavedAmount((double) body.get("saved_amount"));
         }
         savingsGoal.setComplete(savingsGoal.getSavedAmount() >= savingsGoal.getGoalAmount());
 
         savingsGoalRepository.save(savingsGoal);
 
-        return toJsonBody(savingsGoal);
+        return savingsGoal;
     }
 
-    public void deleteSavingsGoal(long id) {
+    public SavingsGoal deleteSavingsGoal(long id) {
         SavingsGoal savingsGoal = findSavingsGoalById(id);
         savingsGoalRepository.delete(savingsGoal);
+        return savingsGoal;
     }
 }

@@ -1,10 +1,12 @@
 package com.jnk2016.soulyyoubackend.transaction;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import javax.persistence.EntityNotFoundException;
 import java.util.HashMap;
 
 @RestController
@@ -43,7 +45,12 @@ public class TransactionController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            if(e.getClass() == EntityNotFoundException.class) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            else {
+                return ResponseEntity.badRequest().body(response);
+            }
         }
     }
 
@@ -54,7 +61,12 @@ public class TransactionController {
             return ResponseEntity.ok(transactionService.getAllIncomeInCurrentBudget(auth));
         } catch (Exception e) {
             response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            if(e.getClass() == EntityNotFoundException.class) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            else {
+                return ResponseEntity.badRequest().body(response);
+            }
         }
     }
 
@@ -65,7 +77,12 @@ public class TransactionController {
             return ResponseEntity.ok(transactionService.getUserPayments(auth));
         } catch (Exception e) {
             response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            if(e.getClass() == EntityNotFoundException.class) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            else {
+                return ResponseEntity.badRequest().body(response);
+            }
         }
     }
 
@@ -74,10 +91,15 @@ public class TransactionController {
         HashMap<String, Object> response = new HashMap<>();
         try {
             response.put("updated_" + body.get("type")+"_total", transactionService.newTransaction(auth, body));
-            return ResponseEntity.ok(response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            if(e.getClass() == EntityNotFoundException.class) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            else {
+                return ResponseEntity.badRequest().body(response);
+            }
         }
     }
 
@@ -87,6 +109,9 @@ public class TransactionController {
             transactionService.removeTransaction(id);
             return ResponseEntity.ok("Transaction removed");
         } catch (Exception e) {
+            if(e.getClass() == NullPointerException.class) {
+                return ResponseEntity.status(HttpStatus.GONE).body(e.getMessage());
+            }
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -99,6 +124,9 @@ public class TransactionController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("message", e.getMessage());
+            if(e.getClass() == NullPointerException.class) {
+                return ResponseEntity.status(HttpStatus.GONE).body(response);
+            }
             return ResponseEntity.badRequest().body(response);
         }
     }

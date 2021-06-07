@@ -9,7 +9,6 @@ import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,12 +73,8 @@ public class MonthlyBudgetService {
         return newEntry;
     }
 
-    @SneakyThrows(EntityNotFoundException.class)
     public MonthlyBudget getCurrentBudget(Authentication auth) {
         ApplicationUser user = userService.getApplicationUser(auth);
-        if(user == null){
-            throw new EntityNotFoundException("User not found");
-        }
 
         LocalDate today = LocalDate.now();
         int currentMonth = today.getMonthValue();
@@ -87,17 +82,14 @@ public class MonthlyBudgetService {
 
         MonthlyBudget current = monthlyBudgetRepository.findByUserAndMonthAndYear(user, currentMonth, currentYear);
         if(current == null) {
-            throw new EntityNotFoundException("Budget not found");
+            throw new NullPointerException("Budget not found");
         }
         return current;
     }
 
-    @SneakyThrows(EntityNotFoundException.class)
     public MonthlyBudget createNewBudget(Authentication auth) {
         ApplicationUser user = userService.getApplicationUser(auth);
-        if(user == null){
-            throw new EntityNotFoundException("User not found");
-        }
+        
         if(user.getBudgets() == null || user.getBudgets().size() == 0) {
             return initializeFirstMonthlyBudget(user);
         }
@@ -112,14 +104,13 @@ public class MonthlyBudgetService {
         return null;
     }
 
-    @SneakyThrows({EntityNotFoundException.class, NullPointerException.class})
     public MonthlyBudget changeBudgetGoal (long id, HashMap<String, Object> body) {
         if(body.size() != 1 || !body.containsKey("budget_goal") || body.get("budget_goal") == null || body.get("budget_goal").getClass() != Double.class) {
-            throw new NullPointerException("Incorrect JSON body");
+            throw new IllegalArgumentException("Incorrect JSON body");
         }
         double budgetGoal = (double)body.get("budget_goal");
         if(budgetGoal < 0.00) {
-            throw new NullPointerException(("Invalid value for budget_goal"));
+            throw new IllegalArgumentException(("Invalid value for budget_goal"));
         }
         try {
             MonthlyBudget entry = getBudgetById(id);
@@ -128,7 +119,7 @@ public class MonthlyBudgetService {
             monthlyBudgetRepository.save(entry);
             return entry;
         } catch (NullPointerException e) {
-            throw new EntityNotFoundException("Budget not found");
+            throw new NullPointerException("Budget not found");
         }
     }
 
@@ -160,15 +151,12 @@ public class MonthlyBudgetService {
         return monthlyBudgetRepository.findById(id).orElseThrow(()-> new NullPointerException("Budget not found"));
     }
 
-    @SneakyThrows(EntityNotFoundException.class)
     public MonthlyBudget getBudgetByDate(Authentication auth, int month, int year) {
         ApplicationUser user = userService.getApplicationUser(auth);
-        if(user == null) {
-            throw new EntityNotFoundException("User not found");
-        }
+
         MonthlyBudget budget = monthlyBudgetRepository.findByUserAndMonthAndYear(user, month, year);
         if(budget == null) {
-            throw new EntityNotFoundException("Budget not found");
+            throw new NullPointerException("Budget not found");
         }
         return budget;
     }

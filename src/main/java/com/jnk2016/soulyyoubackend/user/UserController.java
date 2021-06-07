@@ -1,10 +1,12 @@
 package com.jnk2016.soulyyoubackend.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -36,15 +38,14 @@ public class UserController {
     /** Get the date the user joined */
     @GetMapping("/joined")
     public ResponseEntity<HashMap<String,String>> dateJoined(Authentication auth) {
-        LocalDate date = userService.getDateJoined(auth);
         HashMap<String, String> response = new HashMap<>();
-        if(date != null){
+        try {
+            LocalDate date = userService.getDateJoined(auth);
             response.put("Date Joined", date.toString());
             return ResponseEntity.ok(response);
-        }
-        else {
-            response.put("Error", "Bad authentication credentials!");
-            return ResponseEntity.badRequest().body(response);
+        } catch (EntityNotFoundException e) {
+            response.put("Error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     }
 

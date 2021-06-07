@@ -43,22 +43,36 @@ public class TransactionService {
 
     public List<HashMap<String, Object>> getAllExpensesInCurrentBudget(Authentication auth) {
         MonthlyBudget currentBudget = monthlyBudgetService.getCurrentBudget(auth);
-        return toJsonBody(transactionRepository
-                .findByBudgetAndCompletedAndTypeNotOrderByTimestampDesc(    // queries only for completed payments and expenses (orders by most recent)
-                        currentBudget,true, "income"));
+        try {
+            return toJsonBody(transactionRepository
+                    .findByBudgetAndCompletedAndTypeNotOrderByTimestampDesc(    // queries only for completed payments and expenses (orders by most recent)
+                            currentBudget, true, "income"));
+        } catch (NullPointerException e) {
+            return new ArrayList<>();
+        }
     }
 
     public HashMap<String, Object> getAllIncomeInCurrentBudget(Authentication auth) {
         HashMap<String, Object> response = new HashMap<>();
         MonthlyBudget currentBudget = monthlyBudgetService.getCurrentBudget(auth);
 
-        List<HashMap<String, Object>> received =  toJsonBody(transactionRepository
-                .findByBudgetAndCompletedAndTypeOrderByTimestampDesc(       // queries only for completed incomes (orders by most recent)
-                        currentBudget,true, "income"));
+        List<HashMap<String, Object>> received;
+        try {
+            received = toJsonBody(transactionRepository
+                    .findByBudgetAndCompletedAndTypeOrderByTimestampDesc(       // queries only for completed incomes (orders by most recent)
+                            currentBudget, true, "income"));
+        } catch (NullPointerException e) {
+            received = new ArrayList<>();
+        }
 
-        List<HashMap<String, Object>> pending =  toJsonBody(transactionRepository
-                .findByBudgetAndCompletedAndTypeOrderByTimestampDesc(       // queries only for completed incomes (orders by most recent)
-                        currentBudget,false, "income"));
+        List<HashMap<String, Object>> pending;
+        try {
+            pending = toJsonBody(transactionRepository
+                    .findByBudgetAndCompletedAndTypeOrderByTimestampDesc(       // queries only for uncompleted incomes (orders by most recent)
+                            currentBudget, false, "income"));
+        } catch (NullPointerException e) {
+            pending = new ArrayList<>();
+        }
 
         response.put("received_incomes", received);
         response.put("pending_incomes", pending);
@@ -161,7 +175,7 @@ public class TransactionService {
 
     public double updateTransaction(long id, HashMap<String, Object> body) {
         if(!(body.containsKey("name") && body.containsKey("amount") && body.containsKey("completed") && body.containsKey("timestamp"))) {
-            throw new NullPointerException("Incorrect JSON body");
+            throw new IllegalArgumentException("Incorrect JSON body");
         }
 
         Transaction entry = findTransactionById(id);
@@ -203,13 +217,13 @@ public class TransactionService {
 
     @SneakyThrows(NullPointerException.class)
     public Transaction findTransactionById(long id) {
-        return transactionRepository.findById(id).orElseThrow(()-> new NullPointerException("Transaction not found or has been removed"));
+        return transactionRepository.findById(id).orElseThrow(()-> new NullPointerException("Transaction " + id + " not found or has already been removed"));
     }
 
     @SneakyThrows(NullPointerException.class)
-    public HashMap<String, Object> completeTransaction(String pathParam, String type) {
+    public HashMap<String, Object> completeTransactions(String pathParam, String type) {
         if(pathParam.equals("")) {
-            throw new NullPointerException("No IDs given");
+            throw new IllegalArgumentException("Incorrect path parameter. No IDs given");
         }
 
         HashMap<String, Object> response = new HashMap<>();
@@ -256,7 +270,7 @@ public class TransactionService {
 
     public HashMap<String, Object> completePayments(String pathParam) {
         HashMap<String, Object> response = new HashMap<>();
-        HashMap<String, Object> completedTransaction = completeTransaction(pathParam, "payment");
+        HashMap<String, Object> completedTransaction = completeTransactions(pathParam, "payment");
 
         response.put("new_expenses_total", completedTransaction.get("new_type_total"));
         response.put("updated_payments", completedTransaction.get("updated_transactions"));
@@ -268,7 +282,7 @@ public class TransactionService {
 
     public HashMap<String, Object> receiveIncomes(String pathParam) {
         HashMap<String, Object> response = new HashMap<>();
-        HashMap<String, Object> completedTransaction = completeTransaction(pathParam, "income");
+        HashMap<String, Object> completedTransaction = completeTransactions(pathParam, "income");
 
         response.put("new_income_total", completedTransaction.get("new_type_total"));
         response.put("updated_incomes", completedTransaction.get("updated_transactions"));

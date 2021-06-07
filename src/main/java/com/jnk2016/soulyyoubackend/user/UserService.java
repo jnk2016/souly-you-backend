@@ -9,11 +9,8 @@ import org.springframework.stereotype.Service;
 import javax.persistence.EntityNotFoundException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -23,8 +20,10 @@ public class UserService {
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
+    @SneakyThrows(EntityNotFoundException.class)
     public ApplicationUser getApplicationUser(Authentication auth) {
-        return applicationUserRepository.findByUsername((auth.getName()));  // Obtains the current user
+        return applicationUserRepository.findByUsername((auth.getName()))
+                .orElseThrow(()-> new EntityNotFoundException("Invalid credentials provided"));  // Obtains the current user
     }
 
     @SneakyThrows({IllegalAccessException.class, ClassNotFoundException.class})
@@ -51,23 +50,23 @@ public class UserService {
     }
 
     public boolean newUser(HashMap<String, String> body) {
-        ApplicationUser user = applicationUserRepository.findByUsername(body.get("username"));
-        if(user == null){
+        ApplicationUser user = applicationUserRepository.findByUsername(body.get("username"))
+                .orElse(null);
+        if(user == null) {
             applicationUserRepository.save(new ApplicationUser(body.get("username"), bCryptPasswordEncoder.encode(body.get("password")),
                                             body.get("firstname"), body.get("lastname"), LocalDate.now()));
             return true;
         }
-        else{ return false; }
+        else { return false; }
     }
 
     public LocalDate getDateJoined(Authentication auth){
         ApplicationUser user = getApplicationUser(auth);
-        if(user != null) { return user.getDateJoined(); }
-        else{ return null; }
+        return user.getDateJoined();
     }
 
     @SneakyThrows(NullPointerException.class)
     public ApplicationUser getUserById(long id) {
-        return applicationUserRepository.findById(id).orElseThrow(()-> new NullPointerException("User not found"));
+        return applicationUserRepository.findById(id).orElseThrow(()-> new NullPointerException("No user with id " + id + " found"));
     }
 }

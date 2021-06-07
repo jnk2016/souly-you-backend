@@ -79,7 +79,7 @@ class MonthlyBudgetControllerTest {
 
     @Test
     void shouldNOTGetCurrentBudget() {
-        when(monthlyBudgetService.getCurrentBudget(auth)).thenThrow(new EntityNotFoundException("Budget not found"));
+        when(monthlyBudgetService.getCurrentBudget(auth)).thenThrow(new NullPointerException("Budget not found"));
 
         response = monthlyBudgetController.getCurrentBudget(auth);
         assertEquals(400, response.getStatusCodeValue());
@@ -92,7 +92,7 @@ class MonthlyBudgetControllerTest {
         when(monthlyBudgetService.budgetToJsonBody(monthlyBudget)).thenReturn(jsonResponse);
 
         response = monthlyBudgetController.createNewBudget(auth);
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(201, response.getStatusCodeValue());
     }
 
     @Test
@@ -101,7 +101,7 @@ class MonthlyBudgetControllerTest {
 
         response = monthlyBudgetController.createNewBudget(auth);
         assertEquals(400, response.getStatusCodeValue());
-        assertEquals("Budget already exists!", response.getBody().get("message"));
+        assertEquals("This month's budget already exists!", response.getBody().get("message"));
     }
 
     @Test
@@ -109,7 +109,7 @@ class MonthlyBudgetControllerTest {
         when(monthlyBudgetService.createNewBudget(auth)).thenThrow(new EntityNotFoundException("User not found"));
 
         response = monthlyBudgetController.createNewBudget(auth);
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(401, response.getStatusCodeValue());
         assertEquals("User not found", response.getBody().get("message"));
     }
 
@@ -132,7 +132,7 @@ class MonthlyBudgetControllerTest {
         body.put("month", 4);
         body.put("year", 2021);
 
-        when(monthlyBudgetService.getBudgetByDate(auth, 4, 2021)).thenThrow(new EntityNotFoundException("Incorrect parameters"));
+        when(monthlyBudgetService.getBudgetByDate(auth, 4, 2021)).thenThrow(new IllegalArgumentException("Incorrect parameters"));
 
         response = monthlyBudgetController.getBudgetByDate(auth, body);
         assertEquals(400, response.getStatusCodeValue());
@@ -157,7 +157,7 @@ class MonthlyBudgetControllerTest {
         HashMap<String, Object> body = new HashMap<>();
         body.put("budget_goal", 3500.00);
 
-        when(monthlyBudgetService.changeBudgetGoal(1L, body)).thenThrow(new EntityNotFoundException());
+        when(monthlyBudgetService.changeBudgetGoal(1L, body)).thenThrow(new IllegalArgumentException());
 
         response = monthlyBudgetController.updateBudgetGoal(1L, body);
         assertEquals(400, response.getStatusCodeValue());
@@ -172,7 +172,7 @@ class MonthlyBudgetControllerTest {
         when(monthlyBudgetService.changeBudgetGoal(1L, body)).thenThrow(new NullPointerException());
 
         response = monthlyBudgetController.updateBudgetGoal(1L, body);
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(410, response.getStatusCodeValue());
         assertTrue(response.getBody().containsKey("message"));
     }
 }

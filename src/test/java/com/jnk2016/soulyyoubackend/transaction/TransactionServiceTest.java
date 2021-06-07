@@ -190,6 +190,28 @@ class TransactionServiceTest {
     }
 
     @Test
+    void shouldReturnEmptyExpenseListWhenGetAllExpensesInCurrent() {
+        List<String> filters = Stream.of("user", "budget")
+                .collect(Collectors.toList());
+
+        List<HashMap<String, Object>> response = new ArrayList<>();
+        HashMap<String, Object> toJson = new HashMap<>();
+        toJson.put("name", transactions1.get(0).getName());
+        toJson.put("amount", transactions1.get(0).getAmount());
+        toJson.put("type", transactions1.get(0).getType());
+        toJson.put("completed", transactions1.get(0).isCompleted());
+        toJson.put("timestamp", transactions1.get(0).getTimestamp());
+
+        when(monthlyBudgetService.getCurrentBudget(auth)).thenReturn(monthlyBudget1);
+        when(transactionRepository
+                .findByBudgetAndCompletedAndTypeNotOrderByTimestampDesc(
+                        monthlyBudget1, true, "income"))
+                .thenReturn(new ArrayList<>());
+
+        assertEquals(new ArrayList<>(), transactionService.getAllExpensesInCurrentBudget(auth));
+    }
+
+    @Test
     void shouldNOTGetAllExpensesInCurrentBudgetWhenInvalidBudget() {
         when(monthlyBudgetService.getCurrentBudget(auth)).thenThrow(new EntityNotFoundException("User not found"));
 
@@ -508,8 +530,9 @@ class TransactionServiceTest {
     void shouldThrowNullWhenUpdateTransaction() {
         HashMap<String, Object> body = body();
         body.remove("name");
-        assertThrows(NullPointerException.class, ()-> transactionService.updateTransaction(14L, body));
+        assertThrows(IllegalArgumentException.class, ()-> transactionService.updateTransaction(14L, body));
 
+        body.put("name", "walgreens");
         when(transactionRepository.findById(14L)).thenThrow(new NullPointerException());
         assertThrows(NullPointerException.class, ()-> transactionService.updateTransaction(14L, body));
     }
@@ -527,7 +550,7 @@ class TransactionServiceTest {
         when(transactionRepository.findById(4L)).thenReturn(Optional.of(transactions2.get(1)));
         when(monthlyBudgetService.updateExpenses(monthlyBudget2, 700.00)).thenReturn(870.00);
 
-        HashMap<String, Object> response = transactionService.completeTransaction(pathParam, type);
+        HashMap<String, Object> response = transactionService.completeTransactions(pathParam, type);
         assertEquals(870.00, response.get("new_type_total"));
         assertEquals(actualUpdatedJsonTransactions, response.get("updated_transactions"));
         assertEquals(2, response.get("total_transactions_updated"));
@@ -552,7 +575,7 @@ class TransactionServiceTest {
         when(transactionRepository.findById(4L)).thenReturn(Optional.of(transactions2.get(1)));
         when(monthlyBudgetService.updateExpenses(monthlyBudget2, 700.00)).thenReturn(870.00);
 
-        HashMap<String, Object> response = transactionService.completeTransaction(pathParam, type);
+        HashMap<String, Object> response = transactionService.completeTransactions(pathParam, type);
         assertEquals(870.00, response.get("new_type_total"));
         assertEquals(actualUpdatedJsonTransactions, response.get("updated_transactions"));
         assertEquals(2, response.get("total_transactions_updated"));
@@ -572,7 +595,7 @@ class TransactionServiceTest {
         when(transactionRepository.findById(11L)).thenReturn(Optional.of(transactions3.get(1)));
         when(monthlyBudgetService.updateIncome(monthlyBudget3, 3200.00)).thenReturn(9600.00);
 
-        HashMap<String, Object> response = transactionService.completeTransaction(pathParam, type);
+        HashMap<String, Object> response = transactionService.completeTransactions(pathParam, type);
         assertEquals(9600.00, response.get("new_type_total"));
         assertEquals(actualUpdatedJsonTransactions, response.get("updated_transactions"));
         assertEquals(1, response.get("total_transactions_updated"));
@@ -585,6 +608,6 @@ class TransactionServiceTest {
         String pathParam = "";
         String type = "income";
 
-        assertThrows(NullPointerException.class, ()-> transactionService.completeTransaction(pathParam, type));
+        assertThrows(IllegalArgumentException.class, ()-> transactionService.completeTransactions(pathParam, type));
     }
 }

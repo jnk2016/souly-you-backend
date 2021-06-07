@@ -8,6 +8,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
 
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.util.HashMap;
 
@@ -21,6 +22,7 @@ class UserControllerTest {
     @Mock
     UserService userService;
 
+    Authentication auth;
     HashMap<String, String> body;
 
     @BeforeEach
@@ -32,6 +34,7 @@ class UserControllerTest {
         body.put("firstname", "Nikhil");
         body.put("lastname", "Suri");
 
+        auth = mock(Authentication.class);
     }
 
     @Test
@@ -65,7 +68,9 @@ class UserControllerTest {
 
     @Test
     void shouldNOTReturnDateJoinedWhenBadAuth() {
-        when(userService.getDateJoined(any(Authentication.class))).thenReturn(null);
-        assertEquals(400, userController.dateJoined(any(Authentication.class)).getStatusCodeValue());
+
+        when(userService.getDateJoined(auth)).thenThrow(new EntityNotFoundException("No such user found"));
+
+        assertEquals(401, userController.dateJoined(auth).getStatusCodeValue());
     }
 }

@@ -70,7 +70,7 @@ class MonthlyBudgetServiceTest {
 
     @Test
     void shouldInitializeFirstMonthlyBudget() {
-        assertEquals(4, monthlyBudgetService.initializeFirstMonthlyBudget(user).getMonth());
+        assertEquals(LocalDate.now().getMonthValue(), monthlyBudgetService.initializeFirstMonthlyBudget(user).getMonth());
         assertEquals(2021, monthlyBudgetService.initializeFirstMonthlyBudget(user).getYear());
         assertEquals(0, monthlyBudgetService.initializeFirstMonthlyBudget(user).getBalance());
     }
@@ -78,7 +78,7 @@ class MonthlyBudgetServiceTest {
     @Test
     void shouldAddNextBudget() {
         when(monthlyBudgetRepository.findFirstByUserOrderByBudgetIdDesc(user)).thenReturn(monthlyBudget);
-        assertEquals(5, monthlyBudgetService.addNextBudget(user).getMonth());
+        assertEquals(LocalDate.now().getMonthValue(), monthlyBudgetService.addNextBudget(user).getMonth());
         assertEquals(3000, monthlyBudgetService.addNextBudget(user).getBudgetGoal());
     }
 
@@ -105,25 +105,25 @@ class MonthlyBudgetServiceTest {
         when(monthlyBudgetRepository.findFirstByUserOrderByBudgetIdDesc(user)).thenReturn(monthlyBudget);
 
         assertEquals(3000, monthlyBudgetService.createNewBudget(auth).getBudgetGoal());
-        assertEquals(5, monthlyBudgetService.createNewBudget(auth).getMonth());
+        assertEquals(LocalDate.now().getMonthValue(), monthlyBudgetService.createNewBudget(auth).getMonth());
     }
 
     @Test void createNewBudgetShouldThrowException() {
         Authentication auth = Mockito.mock(Authentication.class);
         when(userService.getApplicationUser(auth)).thenReturn(null);
 
-        assertThrows(EntityNotFoundException.class, () -> monthlyBudgetService.createNewBudget(auth));
+        assertThrows(NullPointerException.class, () -> monthlyBudgetService.createNewBudget(auth));
     }
 
     @Test
     void shouldGetCurrentBudget() {
-        monthlyBudget.setMonth(5);
+        monthlyBudget.setMonth(LocalDate.now().getMonthValue());
         Authentication auth = Mockito.mock(Authentication.class);
         when(userService.getApplicationUser(auth)).thenReturn(user);
-        when(monthlyBudgetRepository.findByUserAndMonthAndYear(user, 5, 2021)).thenReturn(monthlyBudget);
+        when(monthlyBudgetRepository.findByUserAndMonthAndYear(user, LocalDate.now().getMonthValue(), LocalDate.now().getYear())).thenReturn(monthlyBudget);
 
         assertEquals(3000, monthlyBudgetService.getCurrentBudget(auth).getBudgetGoal());
-        assertEquals(5, monthlyBudgetService.getCurrentBudget(auth).getMonth());
+        assertEquals(LocalDate.now().getMonthValue(), monthlyBudgetService.getCurrentBudget(auth).getMonth());
     }
 
     @Test
@@ -132,7 +132,7 @@ class MonthlyBudgetServiceTest {
         when(userService.getApplicationUser(auth)).thenReturn(user);
         when(monthlyBudgetRepository.findByUserAndMonthAndYear(user, 5, 2021)).thenReturn(null);
 
-        EntityNotFoundException thrown = assertThrows(EntityNotFoundException.class, ()-> monthlyBudgetService.getCurrentBudget(auth));
+        NullPointerException thrown = assertThrows(NullPointerException.class, ()-> monthlyBudgetService.getCurrentBudget(auth));
 
         assertEquals("Budget not found", thrown.getMessage());
     }
@@ -140,7 +140,7 @@ class MonthlyBudgetServiceTest {
     @Test
     void shouldNOTGetCurrentBudgetWhenUserNotFound() {
         Authentication auth = Mockito.mock(Authentication.class);
-        when(userService.getApplicationUser(auth)).thenReturn(null);
+        when(userService.getApplicationUser(auth)).thenThrow(new EntityNotFoundException("User not found"));
 
         EntityNotFoundException thrown = assertThrows(
                 EntityNotFoundException.class, ()-> monthlyBudgetService.getCurrentBudget(auth));
@@ -153,7 +153,7 @@ class MonthlyBudgetServiceTest {
         MonthlyBudget currentBudget = new MonthlyBudget();
         currentBudget.setBudgetGoal(3500);
         currentBudget.setUser(user);
-        currentBudget.setMonth(5);
+        currentBudget.setMonth(LocalDate.now().getMonthValue());
         currentBudget.setYear(2021);
         currentBudget.setIncome(0);
         currentBudget.setBalance(0);
@@ -167,10 +167,10 @@ class MonthlyBudgetServiceTest {
         Authentication auth = Mockito.mock(Authentication.class);
 
         when(userService.getApplicationUser(auth)).thenReturn(user);
-        when(monthlyBudgetRepository.findByUserAndMonthAndYear(user, 5, 2021)).thenReturn(currentBudget);
+        when(monthlyBudgetRepository.findByUserAndMonthAndYear(user, LocalDate.now().getMonthValue(), 2021)).thenReturn(currentBudget);
 
         assertEquals(3500, monthlyBudgetService.getCurrentBudget(auth).getBudgetGoal());
-        assertEquals(5, monthlyBudgetService.getCurrentBudget(auth).getMonth());
+        assertEquals(LocalDate.now().getMonthValue(), monthlyBudgetService.getCurrentBudget(auth).getMonth());
     }
 
     @Test
@@ -197,12 +197,12 @@ class MonthlyBudgetServiceTest {
         body.put("budget", 3500.00);
 
         Exception thrown = assertThrows(
-                NullPointerException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
+                IllegalArgumentException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
         assertEquals("Incorrect JSON body", thrown.getMessage());
 
         body.put("budget_goal", 3400.00);
         thrown = assertThrows(
-                NullPointerException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
+                IllegalArgumentException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
         assertEquals("Incorrect JSON body", thrown.getMessage());
 
         body.remove("budget");
@@ -215,12 +215,12 @@ class MonthlyBudgetServiceTest {
         HashMap<String, Object> body = new HashMap<>();
         body.put("budget_goal", null);
         Exception thrown = assertThrows(
-                NullPointerException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
+                IllegalArgumentException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
         assertEquals("Incorrect JSON body", thrown.getMessage());
 
         body.put("budget_goal", -1.00);
         thrown = assertThrows(
-                NullPointerException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
+                IllegalArgumentException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
         assertEquals("Invalid value for budget_goal", thrown.getMessage());
     }
 
@@ -232,9 +232,9 @@ class MonthlyBudgetServiceTest {
         when(monthlyBudgetRepository.findById(1L)).thenThrow(new NullPointerException());
 
         Exception thrown = assertThrows(
-                EntityNotFoundException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
+                NullPointerException.class, ()-> monthlyBudgetService.changeBudgetGoal(1L, body));
         assertEquals("Budget not found", thrown.getMessage());
-        assertEquals(EntityNotFoundException.class, thrown.getClass());
+        assertEquals(NullPointerException.class, thrown.getClass());
     }
 
     @Test
@@ -269,7 +269,7 @@ class MonthlyBudgetServiceTest {
     @Test
     void getBudgetByDateShouldReturnNullWhenInvalidUser() {
         Authentication auth = Mockito.mock(Authentication.class);
-        when(userService.getApplicationUser(auth)).thenReturn(null);
+        when(userService.getApplicationUser(auth)).thenThrow(new EntityNotFoundException("User not found"));
         EntityNotFoundException thrown = assertThrows(
                 EntityNotFoundException.class, ()-> monthlyBudgetService.getBudgetByDate(auth, 1, 2019));
         assertEquals("User not found", thrown.getMessage());
@@ -280,8 +280,8 @@ class MonthlyBudgetServiceTest {
         Authentication auth = Mockito.mock(Authentication.class);
         when(userService.getApplicationUser(auth)).thenReturn(user);
         when(monthlyBudgetRepository.findByUserAndMonthAndYear(user, 1, 2019)).thenReturn(null);
-        EntityNotFoundException thrown = assertThrows(
-                EntityNotFoundException.class, ()-> monthlyBudgetService.getBudgetByDate(auth, 1, 2019));
+        NullPointerException thrown = assertThrows(
+                NullPointerException.class, ()-> monthlyBudgetService.getBudgetByDate(auth, 1, 2019));
         assertEquals("Budget not found", thrown.getMessage());
     }
 
